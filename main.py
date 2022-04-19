@@ -1,9 +1,11 @@
+from random import shuffle
+from time import time
 from typing import List
 import numpy as np
 
 
 class BP:
-    weights = []
+    weights: List[np.matrix] = []
     lr = 0.3
 
     def __sigmoid(self, x):
@@ -16,7 +18,7 @@ class BP:
             wh = np.matrix(wh)
             self.weights.append(wh)
 
-        print(f'Веса: {self.weights}')
+        print(f'Веса: {self.weights} \n')
 
     def __predict(self, vector):
         outputs: List[np.ndarray] = []  # Ответ каждого слоя
@@ -47,7 +49,9 @@ class BP:
             if index == len(self.weights) - 1:
                 error = outputs[index] - correct
             else:
-                error = (self.weights[index + 1].T * weights_delta).A1
+
+                error = (
+                    self.weights[index+1].T * weights_delta.reshape(len(weights_delta), 1)).A1
 
             if index == 0:
                 prev_out = input
@@ -56,9 +60,38 @@ class BP:
 
             gradient = outputs[index] * (1 - outputs[index])
             weights_delta = error * gradient
+            weights_delta = np.array(weights_delta)
             final_delta = prev_out.reshape(
                 len(prev_out), 1) * weights_delta.reshape(1, len(weights_delta)) * self.lr
             self.weights[index] -= final_delta.T
 
+    def report(self, time):
+        print("---- Отчет ----")
+        print(f"{time} секунд")
+        print(f"--- Конец отчета ---")
 
-bp = BP([3, 2, 1])
+
+bp = BP([3, 2, 3, 2])
+
+train = [
+    ([0, 0, 0], [0, 0]),
+    ([0, 0, 1], [1, 1]),
+    ([0, 1, 0], [0, 0]),
+    ([0, 1, 1], [0, 1]),
+    ([1, 0, 0], [1, 0]),
+    ([1, 0, 1], [1, 1]),
+    ([1, 1, 0], [0, 0]),
+    ([1, 1, 1], [0, 1]),
+]
+
+start_time = time()
+
+for i in range(6000):
+    shuffle(train)
+    for input, correct in train:
+        bp.train(input, correct)
+
+finish = time() - start_time
+
+bp.report(finish)
+bp.predict([0, 0, 1])
