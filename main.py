@@ -6,7 +6,10 @@ import numpy as np
 
 class BP:
     weights: List[np.matrix] = []
-    lr = 0.3
+    lr = 0.3  # Скорость обучения
+
+    def MSE(self, y, t):
+        return 0.5 * np.sum((y - t)**2)  # Среднеквадратичная ошибка
 
     def __sigmoid(self, x):
         return 1/(1 + np.exp(-x))
@@ -49,7 +52,6 @@ class BP:
             if index == len(self.weights) - 1:
                 error = outputs[index] - correct
             else:
-
                 error = (
                     self.weights[index+1].T * weights_delta.reshape(len(weights_delta), 1)).A1
 
@@ -58,16 +60,18 @@ class BP:
             else:
                 prev_out = outputs[index - 1]
 
-            gradient = outputs[index] * (1 - outputs[index])
+            gradient = outputs[index] * \
+                (1 - outputs[index])  # Производная сигмоиды
             weights_delta = error * gradient
             weights_delta = np.array(weights_delta)
             final_delta = prev_out.reshape(
                 len(prev_out), 1) * weights_delta.reshape(1, len(weights_delta)) * self.lr
             self.weights[index] -= final_delta.T
 
-    def report(self, time):
+    def report(self, time, epochs):
         print("---- Отчет ----")
-        print(f"{time} секунд")
+        print(f"{round(time, 3)} секунд")
+        print(f"{epochs} эпох")
         print(f"--- Конец отчета ---")
 
 
@@ -85,13 +89,27 @@ train = [
 ]
 
 start_time = time()
+epochCount = 0
+average = 0
 
-for i in range(6000):
+while average > 0.15 or epochCount <= 1000:
     shuffle(train)
     for input, correct in train:
         bp.train(input, correct)
+        bp.lr *= 0.9
+
+    mses: list[float] = []
+    for input, correct in train:
+        output = bp.predict(input)
+        mse = bp.MSE(output, correct)
+        mses.append(mse)
+    average = sum(mses) / len(mses)
+    epochCount += 1
+
 
 finish = time() - start_time
 
-bp.report(finish)
-bp.predict([0, 0, 1])
+res = bp.predict([0, 0, 1])
+print(res)
+
+bp.report(finish, epochCount)
