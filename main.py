@@ -76,17 +76,17 @@ class BP:
         print(f"--- Конец отчета ---")
 
 
-bp = BP([3, 2, 3, 2])
+bp = BP([3, 2, 3, 1])
 
 train = [
-    ([0, 0, 0], [0, 0]),
-    ([0, 0, 1], [1, 1]),
-    ([0, 1, 0], [0, 0]),
-    ([0, 1, 1], [0, 1]),
-    ([1, 0, 0], [1, 0]),
-    ([1, 0, 1], [1, 1]),
-    ([1, 1, 0], [0, 0]),
-    ([1, 1, 1], [0, 1]),
+    ([0, 0, 0], [0]),
+    ([0, 0, 1], [1]),
+    ([0, 1, 0], [0]),
+    ([0, 1, 1], [0]),
+    ([1, 0, 0], [1]),
+    ([1, 0, 1], [1]),
+    ([1, 1, 0], [0]),
+    ([1, 1, 1], [0]),
 ]
 
 start_time = time()
@@ -106,7 +106,7 @@ for i in range(0, 3000):
 
     average = sum(mses) / len(mses)
     bp.lr *= 0.9999999
-    if average < 0.05:
+    if average < 0.0001:
         epochCount = i
         break
     else:
@@ -116,6 +116,6 @@ for i in range(0, 3000):
 finish = time() - start_time
 
 res = bp.predict([0, 0, 1])
-print(res)
+print(f"Ответ - {res}")
 
 bp.report(finish, epochCount, average)
