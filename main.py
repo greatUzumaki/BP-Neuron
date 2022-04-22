@@ -68,10 +68,11 @@ class BP:
                 len(prev_out), 1) * weights_delta.reshape(1, len(weights_delta)) * self.lr
             self.weights[index] -= final_delta.T
 
-    def report(self, time, epochs):
+    def report(self, time, epochs, average):
         print("---- Отчет ----")
         print(f"{round(time, 3)} секунд")
         print(f"{epochs} эпох")
+        print(f"{average} средняя ошибок MSE")
         print(f"--- Конец отчета ---")
 
 
@@ -92,19 +93,24 @@ start_time = time()
 epochCount = 0
 average = 0
 
-while average > 0.15 or epochCount <= 1000:
+for i in range(0, 3000):
     shuffle(train)
     for input, correct in train:
         bp.train(input, correct)
-        bp.lr *= 0.9
 
     mses: list[float] = []
     for input, correct in train:
         output = bp.predict(input)
         mse = bp.MSE(output, correct)
         mses.append(mse)
+
     average = sum(mses) / len(mses)
-    epochCount += 1
+    bp.lr *= 0.9999999
+    if average < 0.05:
+        epochCount = i
+        break
+    else:
+        epochCount = i + 1
 
 
 finish = time() - start_time
@@ -112,4 +118,4 @@ finish = time() - start_time
 res = bp.predict([0, 0, 1])
 print(res)
 
-bp.report(finish, epochCount)
+bp.report(finish, epochCount, average)
