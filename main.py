@@ -1,3 +1,4 @@
+from csv import reader
 from random import shuffle
 from time import time
 from typing import List
@@ -10,6 +11,9 @@ class BP:
 
     def MSE(self, y, t):
         return 0.5 * np.sum((y - t)**2)  # Среднеквадратичная ошибка
+
+    def NormalizeData(self, data):
+        return (data - np.min(data)) / (np.max(data) - np.min(data))
 
     def __sigmoid(self, x):
         return 1/(1 + np.exp(-x))
@@ -68,6 +72,16 @@ class BP:
                 len(prev_out), 1) * weights_delta.reshape(1, len(weights_delta)) * self.lr
             self.weights[index] -= final_delta.T
 
+    def load_csv(self, filename):
+        dataset = list()
+        with open(filename, 'r') as file:
+            csv_reader = reader(file)
+            for row in csv_reader:
+                if not row:
+                    continue
+                dataset.append(list(map(float, row)))
+        return np.array(dataset)
+
     def report(self, time, epochs, average):
         print("---- Отчет ----")
         print(f"{round(time, 3)} секунд")
@@ -76,37 +90,49 @@ class BP:
         print(f"--- Конец отчета ---")
 
 
-bp = BP([3, 2, 3, 1])
+bp = BP([7, 4, 2, 3])
 
-train = [
-    ([0, 0, 0], [0]),
-    ([0, 0, 1], [1]),
-    ([0, 1, 0], [0]),
-    ([0, 1, 1], [0]),
-    ([1, 0, 0], [1]),
-    ([1, 0, 1], [1]),
-    ([1, 1, 0], [0]),
-    ([1, 1, 1], [0]),
-]
+filename = 'dataset2.csv'
+
+DATA = bp.load_csv(filename).T
+TRAIN = DATA[:-1, :]
+CORRECT = np.array(list(map(int, DATA[-1])))
+
+for column in range(len(TRAIN)):
+    TRAIN[column] = bp.NormalizeData(TRAIN[column])
+
+TRAIN = TRAIN.T
+dataset = list()
+for row in range(len(TRAIN)):
+    corr = 0
+    if CORRECT[row] == 1:
+        corr = [1, 0, 0]
+    elif CORRECT[row] == 2:
+        corr = [0, 1, 0]
+    else:
+        corr = [0, 0, 1]
+
+    one_row = tuple((list(TRAIN[row]), corr))
+    dataset.append(one_row)
 
 start_time = time()
 epochCount = 0
 average = 0
 
-for i in range(0, 3000):
-    shuffle(train)
-    for input, correct in train:
+for i in range(0, 500):
+    shuffle(dataset)
+    for input, correct in dataset:
         bp.train(input, correct)
 
     mses: list[float] = []
-    for input, correct in train:
+    for input, correct in dataset:
         output = bp.predict(input)
         mse = bp.MSE(output, correct)
         mses.append(mse)
 
     average = sum(mses) / len(mses)
     bp.lr *= 0.9999999
-    if average < 0.0001:
+    if average < 0.05:
         epochCount = i
         break
     else:
@@ -115,7 +141,8 @@ for i in range(0, 3000):
 
 finish = time() - start_time
 
-res = bp.predict([0, 0, 1])
+data = np.array([15.78, 14.91, 0.8923, 5.674, 3.434, 5.593, 5.136])
+res = bp.predict(bp.NormalizeData(data))
 print(f"Ответ - {res}")
 
 bp.report(finish, epochCount, average)
