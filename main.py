@@ -22,7 +22,7 @@ class BP:
         for index in range(0, len(layers) - 1):
             wh = np.random.uniform(
                 low=-0.3, high=0.3, size=(layers[index+1], layers[index]))
-            wh = np.matrix(wh)
+            wh = np.matrix(wh, dtype=np.float32)
             self.weights.append(wh)
 
         print(f'Веса: {self.weights} \n')
@@ -79,20 +79,22 @@ class BP:
             for row in csv_reader:
                 if not row:
                     continue
-                dataset.append(list(map(float, row)))
+                dataset.append(list(map(np.float32, row)))
         return np.array(dataset)
 
-    def report(self, time, epochs, average):
+    def report(self, time, epochs, average, pred_aver):
         print("---- Отчет ----")
         print(f"{round(time, 3)} секунд")
         print(f"{epochs} эпох")
-        print(f"{average} средняя ошибок MSE")
+        print(f"{round(average, 3)} средняя ошибок MSE на обучающей")
+        print(f"{round(pred_aver,8)} на тестовой")
         print(f"--- Конец отчета ---")
 
 
-bp = BP([7, 4, 2, 3])
+bp = BP([4, 5, 3, 1])
+threshold = 0.03
 
-filename = 'dataset2.csv'
+filename = 'dataset3.csv'
 
 DATA = bp.load_csv(filename).T
 TRAIN = DATA[:-1, :]
@@ -103,23 +105,18 @@ for column in range(len(TRAIN)):
 
 TRAIN = TRAIN.T
 dataset = list()
-for row in range(len(TRAIN)):
-    corr = 0
-    if CORRECT[row] == 1:
-        corr = [1, 0, 0]
-    elif CORRECT[row] == 2:
-        corr = [0, 1, 0]
-    else:
-        corr = [0, 0, 1]
 
-    one_row = tuple((list(TRAIN[row]), corr))
+for row in range(len(TRAIN)):
+    one_row = tuple((list(TRAIN[row]), [CORRECT[row]]))
     dataset.append(one_row)
 
 start_time = time()
 epochCount = 0
 average = 0
+errorCount = 0
 
-for i in range(0, 500):
+# Обучение
+for i in range(0, 400):
     shuffle(dataset)
     for input, correct in dataset:
         bp.train(input, correct)
@@ -128,11 +125,13 @@ for i in range(0, 500):
     for input, correct in dataset:
         output = bp.predict(input)
         mse = bp.MSE(output, correct)
+        if mse > 0.3:
+            errorCount += 1
         mses.append(mse)
 
     average = sum(mses) / len(mses)
-    bp.lr *= 0.9999999
-    if average < 0.05:
+    bp.lr *= 0.9999
+    if average < threshold:
         epochCount = i
         break
     else:
@@ -141,8 +140,26 @@ for i in range(0, 500):
 
 finish = time() - start_time
 
-data = np.array([15.78, 14.91, 0.8923, 5.674, 3.434, 5.593, 5.136])
-res = bp.predict(bp.NormalizeData(data))
-print(f"Ответ - {res}")
+# Предсказывание
+predict_file = 'predict.csv'
 
-bp.report(finish, epochCount, average)
+PREDICT_DATA = bp.load_csv(predict_file).T
+PREDICT = PREDICT_DATA[:-1, :]
+CORRECT_PREDICT = np.array(list(map(int, PREDICT_DATA[-1])))
+PREDICT = PREDICT.T
+
+predict_dataset = list()
+for row in range(len(PREDICT)):
+    one_row = tuple((list(PREDICT[row]), [CORRECT_PREDICT[row]]))
+    predict_dataset.append(one_row)
+
+predict_mse = []
+for input, correct in predict_dataset:
+    res = bp.predict(input)
+    pred_mse = bp.MSE(np.array(res), np.array(correct))
+    predict_mse.append(pred_mse)
+    print(res)
+
+predict_average = sum(predict_mse) / len(predict_mse)
+
+bp.report(finish, epochCount, average, predict_average)
